@@ -13,22 +13,27 @@ class DrawingPoint {
 
 class MyCanvas extends StatefulWidget {
   final CapturedData imageData;
+  final Color currentColor;
 
-  const MyCanvas({super.key, required this.imageData});
+  const MyCanvas(
+      {super.key, required this.imageData, required this.currentColor});
 
   @override
-  _MyCanvasState createState() => _MyCanvasState(imageData: imageData);
+  _MyCanvasState createState() =>
+      _MyCanvasState(imageData: imageData, currentColor: currentColor);
 }
 
 class _MyCanvasState extends State<MyCanvas> {
   CapturedData imageData;
+  Color currentColor;
   final _counter = ValueNotifier<Offset>(Offset.zero);
 
-  _MyCanvasState({required this.imageData});
+  _MyCanvasState({required this.imageData, required this.currentColor});
 
   @override
   Widget build(BuildContext context) {
-    PointPainter currentPainter = PointPainter(notifier: _counter);
+    PointPainter currentPainter =
+        PointPainter(notifier: _counter, color: currentColor);
 
     return Listener(
       onPointerMove: (event) => {
@@ -63,10 +68,11 @@ void raiseAbstractError() {
 
 class PointPainter extends CustomPainter {
   ValueNotifier<Offset> notifier;
+  Color color;
 
-  PointPainter({required this.notifier}) : super(repaint: notifier);
+  PointPainter({required this.notifier, required this.color})
+      : super(repaint: notifier);
 
-  final myColor = Colors.red;
   List<DrawingPoint> points = [];
 
   @override
@@ -76,7 +82,7 @@ class PointPainter extends CustomPainter {
     addPoint(notifier.value);
 
     final paint = Paint()
-      ..color = myColor
+      ..color = color
       ..strokeWidth = 7
       ..strokeCap = StrokeCap.round;
 

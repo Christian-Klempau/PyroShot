@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:screen_capturer/screen_capturer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_annotation/image_annotation.dart';
@@ -73,6 +74,9 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _screenshotPermission = false;
   bool _copyToClipboard = true;
 
+  bool showColorPicker = false;
+  Color currentColor = Color(0xfff44336);
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   AnnotationOption selectedOption = AnnotationOption.line; // Default option.
@@ -90,18 +94,6 @@ class _MyHomePageState extends State<MyHomePage> {
     _screenshotPermission = await screenCapturer.isAccessAllowed();
 
     setState(() {});
-  }
-
-  void _incrementCounter() {
-    _handleClickCapture(CaptureMode.window);
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      // _counter++;
-    });
   }
 
   String chooseAnnotationType(AnnotationOption option) {
@@ -156,11 +148,25 @@ class _MyHomePageState extends State<MyHomePage> {
       print('valid screenshot');
     } else {
       // ignore: avoid_print
-      print('User canceled capture');
+      // if file in imagePath exists, the screenshot worked
+      File file = File(imagePath);
+      if (await file.exists()) {
+        // ignore: avoid_print
+        print('valid screenshot v2');
+        _lastCapturedData = CapturedData(
+          imagePath: imagePath,
+          imageBytes: await file.readAsBytes(),
+        );
+      } else {
+        // ignore: avoid_print
+        print('invalid screenshot');
+      }
     }
     // mazimize flutter
     _maximize();
-    setState(() {});
+    setState(() {
+      _lastCapturedData = _lastCapturedData;
+    });
   }
 
   void _updateLocation(PointerEvent details) {
@@ -176,117 +182,134 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-      // appBar: AppBar(
-      //   // TRY THIS: Try changing the color here to a specific color (to
-      //   // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-      //   // change color while the other colors stay the same.
-      //   backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      //   // Here we take the value from the MyHomePage object that was created by
-      //   // the App.build method, and use it to set our appbar title.
-      //   title: Text(widget.title),
-      // ),
-      key: _scaffoldKey,
-
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            // ElevatedButton(
-            //   onPressed: _openDrawer,
-            //   child: const Text('Open End Drawer'),
-            // ),
-            // ImageAnnotation(
-            //   imagePath: '/home/chris/Documents/file.png',
-            //   annotationType: chooseAnnotationType(selectedOption),
-            // ),
-            // Text(_lastCapturedData?.imagePath ?? 'No image captured yet'),
-            // _lastCapturedData?.imagePath != null
-            //     ? CustomPaint(
-            //         painter: PointPainter(),
-            //         child: Image.file(File(_lastCapturedData!.imagePath!)),
-            //       ) //Image.file(File(_lastCapturedData!.imagePath!))
-            //     : CustomPaint(size: Size(1980, 1920), painter: PointPainter()),
-            // child: CustomPaint(size: Size(1980, 1920), painter: MyPainter())
-            _lastCapturedData != null
-                ? MyCanvas(imageData: _lastCapturedData!)
-                : Text('No image captured'),
-          ],
+        // appBar: AppBar(
+        //   // TRY THIS: Try changing the color here to a specific color (to
+        //   // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        //   // change color while the other colors stay the same.
+        //   backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        //   // Here we take the value from the MyHomePage object that was created by
+        //   // the App.build method, and use it to set our appbar title.
+        //   title: Text(widget.title),
+        // ),
+        key: _scaffoldKey,
+        body: Center(
+          // Center is a layout widget. It takes a single child and positions it
+          // in the middle of the parent.
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Stack(children: [
+                _lastCapturedData != null
+                    ? MyCanvas(imageData: _lastCapturedData!, currentColor: currentColor,)
+                    : Text('No image captured'),
+                Visibility(
+                    visible: showColorPicker,
+                    child: BlockPicker(
+                      pickerColor: Colors.red, //default color
+                      onColorChanged: (Color color) {
+                        //on the color picked
+                        setState(() {
+                          currentColor = color;
+                        });
+                      },
+                    )),
+              ])
+              // ElevatedButton(
+              //   onPressed: _openDrawer,
+              //   child: const Text('Open End Drawer'),
+              // ),
+              // ImageAnnotation(
+              //   imagePath: '/home/chris/Documents/file.png',
+              //   annotationType: chooseAnnotationType(selectedOption),
+              // ),
+              // Text(_lastCapturedData?.imagePath ?? 'No image captured yet'),
+              // _lastCapturedData?.imagePath != null
+              //     ? CustomPaint(
+              //         painter: PointPainter(),
+              //         child: Image.file(File(_lastCapturedData!.imagePath!)),
+              //       ) //Image.file(File(_lastCapturedData!.imagePath!))
+              //     : CustomPaint(size: Size(1980, 1920), painter: PointPainter()),
+              // child: CustomPaint(size: Size(1980, 1920), painter: MyPainter())
+            ],
+          ),
         ),
-      ),
-
-      endDrawer: Drawer(
-        child: ListView(
-          children: [
-            const DrawerHeader(
-              margin: EdgeInsets.zero,
-              padding: EdgeInsets.zero,
-              child: UserAccountsDrawerHeader(
-                decoration: BoxDecoration(color: Colors.green),
-                accountName: Text('Image Annotation Types'),
-                accountEmail: Text('choose one option'),
+        endDrawer: Drawer(
+          child: ListView(
+            children: [
+              const DrawerHeader(
+                margin: EdgeInsets.zero,
+                padding: EdgeInsets.zero,
+                child: UserAccountsDrawerHeader(
+                  decoration: BoxDecoration(color: Colors.green),
+                  accountName: Text('Image Annotation Types'),
+                  accountEmail: Text('choose one option'),
+                ),
               ),
-            ),
-            ListTile(
-              title: Text('Line'),
-              onTap: () => _handleDrawerOptionTap(AnnotationOption.line),
-              selected: selectedOption == AnnotationOption.line,
-            ),
-            ListTile(
-              title: Text('Rectangular'),
-              onTap: () => _handleDrawerOptionTap(AnnotationOption.rectangle),
-              selected: selectedOption == AnnotationOption.rectangle,
-            ),
-            ListTile(
-              title: Text('Oval'),
-              onTap: () => _handleDrawerOptionTap(AnnotationOption.oval),
-              selected: selectedOption == AnnotationOption.oval,
-            ),
-            ListTile(
-              title: Text('Text'),
-              onTap: () => _handleDrawerOptionTap(AnnotationOption.text),
-              selected: selectedOption == AnnotationOption.text,
-            ),
-          ],
+              ListTile(
+                title: Text('Line'),
+                onTap: () => _handleDrawerOptionTap(AnnotationOption.line),
+                selected: selectedOption == AnnotationOption.line,
+              ),
+              ListTile(
+                title: Text('Rectangular'),
+                onTap: () => _handleDrawerOptionTap(AnnotationOption.rectangle),
+                selected: selectedOption == AnnotationOption.rectangle,
+              ),
+              ListTile(
+                title: Text('Oval'),
+                onTap: () => _handleDrawerOptionTap(AnnotationOption.oval),
+                selected: selectedOption == AnnotationOption.oval,
+              ),
+              ListTile(
+                title: Text('Text'),
+                onTap: () => _handleDrawerOptionTap(AnnotationOption.text),
+                selected: selectedOption == AnnotationOption.text,
+              ),
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: Wrap(
-        //will break to another line on overflow
-        direction: Axis.horizontal, //use vertical to show  on vertical axis
-        children: <Widget>[
-          Container(
-              margin: EdgeInsets.all(10),
-              child: FloatingActionButton(
-                onPressed: () {
-                  //action code for button 1
-                },
-                child: Icon(Icons.add), //
-              )), //button first
+        floatingActionButton: Stack(children: [
+          Wrap(
+            //will break to another line on overflow
+            direction: Axis.horizontal, //use vertical to show  on vertical axis
+            children: <Widget>[
+             
+              Container(
+                  margin: EdgeInsets.all(10),
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      setState(() {
+                        showColorPicker = !showColorPicker;
+                      });
+                      //action code for button 1
+                    },
+                    backgroundColor: currentColor,
+                    child: Icon(Icons.color_lens), //
+                  )), //button first
 
-          Container(
-              margin: EdgeInsets.all(10),
-              child: FloatingActionButton(
-                onPressed: () {
-                  //action code for button 2
-                },
-                backgroundColor: Colors.deepPurpleAccent,
-                child: Icon(Icons.brush_outlined),
-              )), // button second
+              Container(
+                  margin: EdgeInsets.all(10),
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      //action code for button 2
+                    },
+                    backgroundColor: Colors.deepPurpleAccent,
+                    child: Icon(Icons.brush_outlined),
+                  )), // button second
 
-          Container(
-              margin: EdgeInsets.all(10),
-              child: FloatingActionButton(
-                onPressed: () {
-                  _handleClickCapture(CaptureMode.window);
-                },
-                backgroundColor: Colors.deepOrangeAccent,
-                child: Icon(Icons.camera),
-              )), // button third
+              Container(
+                  margin: EdgeInsets.all(10),
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      _handleClickCapture(CaptureMode.window);
+                    },
+                    backgroundColor: Colors.deepOrangeAccent,
+                    child: Icon(Icons.camera),
+                  )), // button third
 
-          // Add more buttons here
-        ],
-      ),
-    );
+              // Add more buttons here
+            ],
+          ),
+        ]));
   }
 }
