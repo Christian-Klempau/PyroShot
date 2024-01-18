@@ -28,9 +28,14 @@ class _MyCanvasState extends State<MyCanvas> {
 
   @override
   Widget build(BuildContext context) {
+    PointPainter currentPainter = PointPainter(notifier: _counter);
+
     return Listener(
       onPointerMove: (event) => {
         _counter.value = event.localPosition,
+      },
+      onPointerUp: (event) => {
+        _counter.value = Offset.zero,
       },
       // child: CustomPaint(
       //   painter: PointPainter(notifier: _counter),
@@ -41,10 +46,9 @@ class _MyCanvasState extends State<MyCanvas> {
       child: imageData.imagePath != null
           ? Stack(
               children: [
-                Text(imageData.imagePath!),
                 Image.file(File(imageData.imagePath!)),
                 CustomPaint(
-                  painter: PointPainter(notifier: _counter),
+                  painter: currentPainter,
                 ),
               ],
             )
@@ -57,29 +61,12 @@ void raiseAbstractError() {
   throw Exception('This method must be implemented');
 }
 
-class BasePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    return;
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
-  }
-
-  void addPoint(Offset offset) {
-    return;
-  }
-}
-
 class PointPainter extends CustomPainter {
   ValueNotifier<Offset> notifier;
 
   PointPainter({required this.notifier}) : super(repaint: notifier);
 
   final myColor = Colors.red;
-  final double threshold = 1;
   List<DrawingPoint> points = [];
 
   @override
@@ -90,7 +77,7 @@ class PointPainter extends CustomPainter {
 
     final paint = Paint()
       ..color = myColor
-      ..strokeWidth = 10
+      ..strokeWidth = 7
       ..strokeCap = StrokeCap.round;
 
     // canvas.drawPoints(pointMode, points.map((e) => e.offset).toList(), paint);
@@ -98,6 +85,9 @@ class PointPainter extends CustomPainter {
     for (var i = 0; i < points.length - 1; i++) {
       final p1 = points[i].offset;
       final p2 = points[i + 1].offset;
+
+      if (p1 == Offset.zero || p2 == Offset.zero) continue;
+
       // double xDiff = p2.dx - p1.dx;
       // double yDiff = p2.dy - p1.dy;
       // if (xDiff.abs() < threshold || yDiff.abs() < threshold) {
