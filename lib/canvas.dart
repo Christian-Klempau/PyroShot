@@ -4,11 +4,22 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 
 import 'package:screen_capturer/screen_capturer.dart';
+import 'package:screenflutter/painters/rectPainter.dart';
 
-class DrawingPoint {
-  Offset offset;
+import 'painters/pointPainter.dart';
 
-  DrawingPoint({required this.offset});
+enum MouseKind {
+  dummy,
+  move,
+  down,
+  up,
+}
+
+class MouseEvent {
+  final Offset offset;
+  final MouseKind kind;
+
+  MouseEvent({required this.offset, required this.kind});
 }
 
 class MyCanvas extends StatefulWidget {
@@ -26,24 +37,44 @@ class MyCanvas extends StatefulWidget {
 class _MyCanvasState extends State<MyCanvas> {
   CapturedData imageData;
   Color currentColor;
-  final _counter = ValueNotifier<Offset>(Offset.zero);
+  final _notifier = ValueNotifier<MouseEvent>(MouseEvent(
+    offset: Offset.zero,
+    kind: MouseKind.dummy,
+  ));
+  late RectPainter currentPainter;
 
   _MyCanvasState({required this.imageData, required this.currentColor});
 
   @override
-  Widget build(BuildContext context) {
-    PointPainter currentPainter =
-        PointPainter(notifier: _counter, color: currentColor);
+  void initState() {
+    super.initState();
+    currentPainter = RectPainter(notifier: _notifier, color: currentColor);
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    print("BUILDING");
     return Listener(
       onPointerMove: (event) => {
-        _counter.value = event.localPosition,
+        _notifier.value = MouseEvent(
+          offset: event.localPosition,
+          kind: MouseKind.move,
+        ),
+      },
+      onPointerDown: (event) => {
+        _notifier.value = MouseEvent(
+          offset: event.localPosition,
+          kind: MouseKind.down,
+        ),
       },
       onPointerUp: (event) => {
-        _counter.value = Offset.zero,
+        _notifier.value = MouseEvent(
+          offset: event.localPosition,
+          kind: MouseKind.up,
+        ),
       },
       // child: CustomPaint(
-      //   painter: PointPainter(notifier: _counter),
+      //   painter: PointPainter(notifier: _notifier),
       //   size: Size(1980, 1920),
       //   child: imageData.imagePath != null
       //       ? Image.file(File(imageData.imagePath!))
@@ -53,62 +84,12 @@ class _MyCanvasState extends State<MyCanvas> {
               children: [
                 Image.file(File(imageData.imagePath!)),
                 CustomPaint(
+                  key: UniqueKey(),
                   painter: currentPainter,
                 ),
               ],
             )
           : Container(),
     );
-  }
-}
-
-void raiseAbstractError() {
-  throw Exception('This method must be implemented');
-}
-
-class PointPainter extends CustomPainter {
-  ValueNotifier<Offset> notifier;
-  Color color;
-
-  PointPainter({required this.notifier, required this.color})
-      : super(repaint: notifier);
-
-  List<DrawingPoint> points = [];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const pointMode = ui.PointMode.points;
-
-    addPoint(notifier.value);
-
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 7
-      ..strokeCap = StrokeCap.round;
-
-    // canvas.drawPoints(pointMode, points.map((e) => e.offset).toList(), paint);
-
-    for (var i = 0; i < points.length - 1; i++) {
-      final p1 = points[i].offset;
-      final p2 = points[i + 1].offset;
-
-      if (p1 == Offset.zero || p2 == Offset.zero) continue;
-
-      // double xDiff = p2.dx - p1.dx;
-      // double yDiff = p2.dy - p1.dy;
-      // if (xDiff.abs() < threshold || yDiff.abs() < threshold) {
-      //   continue;
-      // }
-      canvas.drawLine(p1, p2, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
-  }
-
-  void addPoint(Offset offset) {
-    points.add(DrawingPoint(offset: offset));
   }
 }

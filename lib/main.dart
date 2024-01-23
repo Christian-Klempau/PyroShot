@@ -200,7 +200,11 @@ class _MyHomePageState extends State<MyHomePage> {
             children: <Widget>[
               Stack(children: [
                 _lastCapturedData != null
-                    ? MyCanvas(imageData: _lastCapturedData!, currentColor: currentColor,)
+                    ? MyCanvas(
+                        key:UniqueKey(),
+                        imageData: _lastCapturedData!,
+                        currentColor: currentColor,
+                      )
                     : Text('No image captured'),
                 Visibility(
                     visible: showColorPicker,
@@ -210,6 +214,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         //on the color picked
                         setState(() {
                           currentColor = color;
+                          showColorPicker = false;
                         });
                       },
                     )),
@@ -273,7 +278,6 @@ class _MyHomePageState extends State<MyHomePage> {
             //will break to another line on overflow
             direction: Axis.horizontal, //use vertical to show  on vertical axis
             children: <Widget>[
-             
               Container(
                   margin: EdgeInsets.all(10),
                   child: FloatingActionButton(
