@@ -54,7 +54,10 @@ class RectPainter extends CustomPainter {
       rects.add(MyRect(
           color: color, topLeft: event.offset, bottomRight: event.offset));
     } else if (event.kind == MouseKind.move) {
-      if (rects.isEmpty) return;
+      if (rects.isEmpty) {
+        rects.add(MyRect(
+            color: color, topLeft: event.offset, bottomRight: event.offset));
+      }
       if (rects.last.bottomRight == Offset.zero) {
         rects.last.bottomRight = event.offset;
       }
