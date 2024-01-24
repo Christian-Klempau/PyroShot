@@ -201,7 +201,7 @@ class _MyHomePageState extends State<MyHomePage> {
               Stack(children: [
                 _lastCapturedData != null
                     ? MyCanvas(
-                        key:UniqueKey(),
+                        key: UniqueKey(),
                         imageData: _lastCapturedData!,
                         currentColor: currentColor,
                       )
@@ -238,41 +238,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ],
           ),
         ),
-        endDrawer: Drawer(
-          child: ListView(
-            children: [
-              const DrawerHeader(
-                margin: EdgeInsets.zero,
-                padding: EdgeInsets.zero,
-                child: UserAccountsDrawerHeader(
-                  decoration: BoxDecoration(color: Colors.green),
-                  accountName: Text('Image Annotation Types'),
-                  accountEmail: Text('choose one option'),
-                ),
-              ),
-              ListTile(
-                title: Text('Line'),
-                onTap: () => _handleDrawerOptionTap(AnnotationOption.line),
-                selected: selectedOption == AnnotationOption.line,
-              ),
-              ListTile(
-                title: Text('Rectangular'),
-                onTap: () => _handleDrawerOptionTap(AnnotationOption.rectangle),
-                selected: selectedOption == AnnotationOption.rectangle,
-              ),
-              ListTile(
-                title: Text('Oval'),
-                onTap: () => _handleDrawerOptionTap(AnnotationOption.oval),
-                selected: selectedOption == AnnotationOption.oval,
-              ),
-              ListTile(
-                title: Text('Text'),
-                onTap: () => _handleDrawerOptionTap(AnnotationOption.text),
-                selected: selectedOption == AnnotationOption.text,
-              ),
-            ],
-          ),
-        ),
         floatingActionButton: Stack(children: [
           Wrap(
             //will break to another line on overflow
@@ -290,7 +255,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     backgroundColor: currentColor,
                     child: Icon(Icons.color_lens), //
                   )), //button first
-
+              Container(
+                  margin: EdgeInsets.all(10),
+                  child: FloatingActionButton(
+                    onPressed: () {},
+                    backgroundColor: Colors.tealAccent,
+                    child: Icon(Icons.save), //
+                  )), //button first
               Container(
                   margin: EdgeInsets.all(10),
                   child: FloatingActionButton(
