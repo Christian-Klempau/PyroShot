@@ -45,7 +45,6 @@ class PointPainter extends CustomPainter {
   }
 
   void processEvent(MouseEvent event) {
-    print(event.kind);
     if (event.kind == MouseKind.dummy) {
       return;
     } else if (event.kind == MouseKind.down) {

@@ -41,6 +41,7 @@ dependencies:
   permission_handler: any
   window_manager: any
   flutter_colorpicker: ^1.0.3
+  process_run: any
 
 dev_dependencies:
   flutter_test:

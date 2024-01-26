@@ -33,16 +33,23 @@ class MyCanvas extends StatefulWidget {
   final CapturedData imageData;
   final Color currentColor;
   final PaintKind paintMode;
+  final Function saveCallback;
 
-  const MyCanvas(
-      {super.key,
-      required this.imageData,
-      required this.currentColor,
-      required this.paintMode});
+  const MyCanvas({
+    super.key,
+    required this.imageData,
+    required this.currentColor,
+    required this.paintMode,
+    required this.saveCallback,
+  });
 
   @override
   _MyCanvasState createState() => _MyCanvasState(
-      imageData: imageData, currentColor: currentColor, paintMode: paintMode);
+        imageData: imageData,
+        currentColor: currentColor,
+        paintMode: paintMode,
+        saveCallback: saveCallback,
+      );
 }
 
 class _MyCanvasState extends State<MyCanvas> {
@@ -50,28 +57,31 @@ class _MyCanvasState extends State<MyCanvas> {
   Color currentColor;
   PaintKind paintMode;
   late CustomPainter currentPainter;
+  Function saveCallback;
 
   final _notifier = ValueNotifier<MouseEvent>(MouseEvent(
     offset: Offset.zero,
     kind: MouseKind.dummy,
   ));
 
-  _MyCanvasState(
-      {required this.imageData,
-      required this.currentColor,
-      required this.paintMode});
-  GlobalKey globalKey = GlobalKey();
+  _MyCanvasState({
+    required this.imageData,
+    required this.currentColor,
+    required this.paintMode,
+    required this.saveCallback,
+  });
+  static GlobalKey globalKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
+
     switch (paintMode) {
       case PaintKind.line:
         currentPainter = PointPainter(notifier: _notifier, color: currentColor);
         break;
       case PaintKind.rect:
-        currentPainter =
-            RectPainter(notifier: _notifier, color: currentColor);
+        currentPainter = RectPainter(notifier: _notifier, color: currentColor);
         break;
     }
   }
@@ -79,15 +89,17 @@ class _MyCanvasState extends State<MyCanvas> {
   Future<Uint8List> captureImage() async {
     RenderRepaintBoundary boundary =
         globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+
+    if (boundary.debugNeedsPaint) {
+      await Future.delayed(const Duration(milliseconds: 20));
+      return captureImage();
+    }
     ui.Image image = await boundary.toImage();
     ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     if (byteData == null) {
       return Uint8List(0);
     }
     Uint8List pngBytes = byteData.buffer.asUint8List();
-    // save to disk
-    File imgFile = File('/home/chris/Pictures/test.png');
-    imgFile.writeAsBytes(pngBytes);
     return pngBytes;
   }
 
@@ -116,14 +128,37 @@ class _MyCanvasState extends State<MyCanvas> {
           ? Stack(
               key: UniqueKey(),
               children: [
-                Image.file(File(imageData.imagePath!)),
-                CustomPaint(
-                  key: UniqueKey(),
-                  painter: currentPainter,
+                RepaintBoundary(
+                  key: globalKey,
+                  child: Stack(
+                    children: [
+                      Image.file(File(imageData.imagePath!)),
+                      CustomPaint(
+                        key: UniqueKey(),
+                        painter: currentPainter,
+                      ),
+                    ],
+                  ),
                 ),
-                Text(paintMode.toString(),
-                    style:
-                        TextStyle(background: Paint()..color = Colors.white)),
+                ButtonBar(
+                  alignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        Uint8List pngBytes = await captureImage();
+                        saveCallback(pngBytes);
+                      },
+                      style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.all<Color>(currentColor)),
+                      child: Text('Save',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
               ],
             )
           : Container(),

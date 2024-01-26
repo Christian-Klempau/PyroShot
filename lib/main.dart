@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:process_run/shell_run.dart';
 import 'package:screen_capturer/screen_capturer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_annotation/image_annotation.dart';
@@ -48,6 +49,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _copyToClipboard = true;
 
   bool showColorPicker = false;
+  ValueNotifier<bool> screenshotRequested = ValueNotifier<bool>(false);
   Color currentColor = Color(0xfff44336);
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -119,6 +121,22 @@ class _MyHomePageState extends State<MyHomePage> {
     print("${details.position.dx}, ${details.position.dy}");
   }
 
+  Future<void> handleScreenshot(Uint8List pngBytes) async {
+    // save to disk
+        Directory directory = await getApplicationDocumentsDirectory();
+    String imageName =
+        'Screenshot-${DateTime.now().millisecondsSinceEpoch}.png';
+    String imagePath = '${directory.path}/$imageName';
+    File imgFile = File(imagePath);
+    imgFile.writeAsBytes(pngBytes);
+    print('save to disk');
+    if (_copyToClipboard) {
+      // execute shell command
+      var shell = Shell();
+      shell.run('xclip -selection clipboard -t image/png -i ${imagePath}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -129,6 +147,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // than having to individually change instances of widgets.
     return Scaffold(
         key: _scaffoldKey,
+        backgroundColor: Color.fromARGB(255, 48, 48, 48),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -138,10 +157,17 @@ class _MyHomePageState extends State<MyHomePage> {
                     ? MyCanvas(
                         key: UniqueKey(),
                         imageData: _lastCapturedData!,
+                        saveCallback: handleScreenshot,
                         currentColor: currentColor,
                         paintMode: annotationOption,
                       )
-                    : Text('No image captured'),
+                    : Text(
+                        'No image captured',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                        ),
+                      ),
                 Visibility(
                     visible: showColorPicker,
                     child: BlockPicker(
@@ -170,7 +196,6 @@ class _MyHomePageState extends State<MyHomePage> {
                       setState(() {
                         showColorPicker = !showColorPicker;
                       });
-                      //action code for button 1
                     },
                     backgroundColor: currentColor,
                     child: Icon(
@@ -180,7 +205,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(100)),
-                  )), //button first
+                  )),
               Container(
                   margin: EdgeInsets.all(10),
                   child: FloatingActionButton(
