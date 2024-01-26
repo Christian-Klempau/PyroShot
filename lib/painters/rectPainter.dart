@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:screenflutter/painters/basePainter.dart';
 
 import '../canvas.dart';
 
@@ -13,7 +14,7 @@ class MyRect {
       {required this.color, required this.topLeft, required this.bottomRight});
 }
 
-class RectPainter extends CustomPainter {
+class RectPainter extends BasePainter {
   ValueNotifier<MouseEvent> notifier;
   Color color;
 
@@ -36,14 +37,14 @@ class RectPainter extends CustomPainter {
       final p1 = rects[i].topLeft;
       final p2 = rects[i].bottomRight;
 
-      if (p1 == Offset.zero || p2 == Offset.zero) continue;
+      if (p1 == Offset.infinite || p2 == Offset.infinite) continue;
 
       canvas.drawRect(Rect.fromPoints(p1, p2), paint);
     }
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
+  bool shouldRepaint(BasePainter oldDelegate) {
     return true;
   }
 
@@ -58,7 +59,7 @@ class RectPainter extends CustomPainter {
         rects.add(MyRect(
             color: color, topLeft: event.offset, bottomRight: event.offset));
       }
-      if (rects.last.bottomRight == Offset.zero) {
+      if (rects.last.bottomRight == Offset.infinite) {
         rects.last.bottomRight = event.offset;
       }
       rects.last.topLeft = event.offset;
@@ -66,8 +67,24 @@ class RectPainter extends CustomPainter {
       if (rects.isNotEmpty) {
         rects.last.topLeft = event.offset;
       }
-      rects.add(
-          MyRect(color: color, topLeft: Offset.zero, bottomRight: Offset.zero));
+      rects.add(MyRect(
+          color: color,
+          topLeft: Offset.infinite,
+          bottomRight: Offset.infinite));
+    }
+  }
+
+  @override
+  void undo() {
+    if (rects.isNotEmpty) {
+      rects.removeLast();
+      if (rects.isNotEmpty) {
+        rects.removeLast();
+      }
+      rects.add(MyRect(
+          color: color,
+          topLeft: Offset.infinite,
+          bottomRight: Offset.infinite));
     }
   }
 }

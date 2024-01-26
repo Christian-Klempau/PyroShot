@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:screenflutter/painters/basePainter.dart';
 
 import '../canvas.dart';
 
@@ -11,7 +12,7 @@ class Stroke {
   Stroke({required this.color});
 }
 
-class PointPainter extends CustomPainter {
+class PointPainter extends BasePainter {
   ValueNotifier<MouseEvent> notifier;
   Color color;
 
@@ -40,7 +41,7 @@ class PointPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
+  bool shouldRepaint(BasePainter oldDelegate) {
     return true;
   }
 
@@ -57,6 +58,17 @@ class PointPainter extends CustomPainter {
       strokes.last.points.add(event.offset);
     } else if (event.kind == MouseKind.up) {
       strokes.last.points.add(event.offset);
+      strokes.add(Stroke(color: color));
+    }
+  }
+
+  @override
+  void undo() {
+    if (strokes.isNotEmpty) {
+      strokes.removeLast();
+      if (strokes.isNotEmpty) {
+        strokes.removeLast();
+      }
       strokes.add(Stroke(color: color));
     }
   }

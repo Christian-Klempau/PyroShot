@@ -3,9 +3,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 
 import 'package:screen_capturer/screen_capturer.dart';
+import 'package:screenflutter/painters/basePainter.dart';
 import 'package:screenflutter/painters/rectPainter.dart';
 
 import 'painters/pointPainter.dart';
@@ -56,8 +58,9 @@ class _MyCanvasState extends State<MyCanvas> {
   CapturedData imageData;
   Color currentColor;
   PaintKind paintMode;
-  late CustomPainter currentPainter;
+  late BasePainter currentPainter;
   Function saveCallback;
+  bool canUndo = true;
 
   final _notifier = ValueNotifier<MouseEvent>(MouseEvent(
     offset: Offset.zero,
@@ -76,6 +79,8 @@ class _MyCanvasState extends State<MyCanvas> {
   void initState() {
     super.initState();
 
+    RawKeyboard.instance.addListener(onKeyEvent);
+
     switch (paintMode) {
       case PaintKind.line:
         currentPainter = PointPainter(notifier: _notifier, color: currentColor);
@@ -84,6 +89,28 @@ class _MyCanvasState extends State<MyCanvas> {
         currentPainter = RectPainter(notifier: _notifier, color: currentColor);
         break;
     }
+  }
+
+  void onKeyEvent(RawKeyEvent event) {
+    // Here you have access to the state of CTRL+ALT+SHIFT keys
+    bool ctrlPressed = event.isControlPressed;
+    bool zPressed = event.isKeyPressed(LogicalKeyboardKey.keyZ);
+
+    if (ctrlPressed && zPressed && canUndo) {
+      canUndo = false;
+      currentPainter.undo();
+      _notifier.value = MouseEvent(
+        offset: Offset.infinite,
+        kind: MouseKind.dummy,
+      );
+      resetCanUndo();
+    }
+  }
+
+  void resetCanUndo() {
+    Future.delayed(const Duration(milliseconds: 200), () {
+      canUndo = true;
+    });
   }
 
   Future<Uint8List> captureImage() async {
