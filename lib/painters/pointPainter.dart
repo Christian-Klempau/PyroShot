@@ -52,6 +52,9 @@ class PointPainter extends CustomPainter {
       strokes.add(Stroke(color: color));
       strokes.last.points.add(event.offset);
     } else if (event.kind == MouseKind.move) {
+      if (strokes.isEmpty) {
+        strokes.add(Stroke(color: color));
+      }
       strokes.last.points.add(event.offset);
     } else if (event.kind == MouseKind.up) {
       strokes.last.points.add(event.offset);
