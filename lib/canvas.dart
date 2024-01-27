@@ -1,118 +1,194 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 
 import 'package:screen_capturer/screen_capturer.dart';
+import 'package:screenflutter/painters/basePainter.dart';
+import 'package:screenflutter/painters/rectPainter.dart';
 
-class DrawingPoint {
-  Offset offset;
+import 'painters/pointPainter.dart';
 
-  DrawingPoint({required this.offset});
+enum MouseKind {
+  dummy,
+  move,
+  down,
+  up,
+}
+
+enum PaintKind {
+  line,
+  rect,
+}
+
+class MouseEvent {
+  final Offset offset;
+  final MouseKind kind;
+
+  MouseEvent({required this.offset, required this.kind});
 }
 
 class MyCanvas extends StatefulWidget {
   final CapturedData imageData;
+  final Color currentColor;
+  final PaintKind paintMode;
+  final Function saveCallback;
 
-  const MyCanvas({super.key, required this.imageData});
+  const MyCanvas({
+    super.key,
+    required this.imageData,
+    required this.currentColor,
+    required this.paintMode,
+    required this.saveCallback,
+  });
 
   @override
-  _MyCanvasState createState() => _MyCanvasState(imageData: imageData);
+  _MyCanvasState createState() => _MyCanvasState(
+        imageData: imageData,
+        currentColor: currentColor,
+        paintMode: paintMode,
+        saveCallback: saveCallback,
+      );
 }
 
 class _MyCanvasState extends State<MyCanvas> {
   CapturedData imageData;
-  final _counter = ValueNotifier<Offset>(Offset.zero);
+  Color currentColor;
+  PaintKind paintMode;
+  late BasePainter currentPainter;
+  Function saveCallback;
+  bool canUndo = true;
 
-  _MyCanvasState({required this.imageData});
+  final _notifier = ValueNotifier<MouseEvent>(MouseEvent(
+    offset: Offset.zero,
+    kind: MouseKind.dummy,
+  ));
+
+  _MyCanvasState({
+    required this.imageData,
+    required this.currentColor,
+    required this.paintMode,
+    required this.saveCallback,
+  });
+  static GlobalKey globalKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+
+    RawKeyboard.instance.addListener(onKeyEvent);
+
+    switch (paintMode) {
+      case PaintKind.line:
+        currentPainter = PointPainter(notifier: _notifier, color: currentColor);
+        break;
+      case PaintKind.rect:
+        currentPainter = RectPainter(notifier: _notifier, color: currentColor);
+        break;
+    }
+  }
+
+  void onKeyEvent(RawKeyEvent event) {
+    // Here you have access to the state of CTRL+ALT+SHIFT keys
+    bool ctrlPressed = event.isControlPressed;
+    bool zPressed = event.isKeyPressed(LogicalKeyboardKey.keyZ);
+
+    if (ctrlPressed && zPressed && canUndo) {
+      canUndo = false;
+      currentPainter.undo();
+      _notifier.value = MouseEvent(
+        offset: Offset.infinite,
+        kind: MouseKind.dummy,
+      );
+      resetCanUndo();
+    }
+  }
+
+  void resetCanUndo() {
+    Future.delayed(const Duration(milliseconds: 200), () {
+      canUndo = true;
+    });
+  }
+
+  Future<Uint8List> captureImage() async {
+    RenderRepaintBoundary boundary =
+        globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+
+    if (boundary.debugNeedsPaint) {
+      await Future.delayed(const Duration(milliseconds: 20));
+      return captureImage();
+    }
+    ui.Image image = await boundary.toImage();
+    ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) {
+      return Uint8List(0);
+    }
+    Uint8List pngBytes = byteData.buffer.asUint8List();
+    return pngBytes;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Listener(
       onPointerMove: (event) => {
-        _counter.value = event.localPosition,
+        _notifier.value = MouseEvent(
+          offset: event.localPosition,
+          kind: MouseKind.move,
+        ),
       },
-      // child: CustomPaint(
-      //   painter: PointPainter(notifier: _counter),
-      //   size: Size(1980, 1920),
-      //   child: imageData.imagePath != null
-      //       ? Image.file(File(imageData.imagePath!))
-      //       : Container(),
+      onPointerDown: (event) => {
+        _notifier.value = MouseEvent(
+          offset: event.localPosition,
+          kind: MouseKind.down,
+        ),
+      },
+      onPointerUp: (event) => {
+        _notifier.value = MouseEvent(
+          offset: event.localPosition,
+          kind: MouseKind.up,
+        ),
+      },
       child: imageData.imagePath != null
           ? Stack(
+              key: UniqueKey(),
               children: [
-                Text(imageData.imagePath!),
-                Image.file(File(imageData.imagePath!)),
-                CustomPaint(
-                  painter: PointPainter(notifier: _counter),
+                RepaintBoundary(
+                  key: globalKey,
+                  child: Stack(
+                    children: [
+                      Image.file(File(imageData.imagePath!)),
+                      CustomPaint(
+                        key: UniqueKey(),
+                        painter: currentPainter,
+                      ),
+                    ],
+                  ),
+                ),
+                ButtonBar(
+                  alignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        Uint8List pngBytes = await captureImage();
+                        saveCallback(pngBytes);
+                      },
+                      style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.all<Color>(currentColor)),
+                      child: Text('Save',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
               ],
             )
           : Container(),
     );
-  }
-}
-
-void raiseAbstractError() {
-  throw Exception('This method must be implemented');
-}
-
-class BasePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    return;
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
-  }
-
-  void addPoint(Offset offset) {
-    return;
-  }
-}
-
-class PointPainter extends CustomPainter {
-  ValueNotifier<Offset> notifier;
-
-  PointPainter({required this.notifier}) : super(repaint: notifier);
-
-  final myColor = Colors.red;
-  final double threshold = 1;
-  List<DrawingPoint> points = [];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const pointMode = ui.PointMode.points;
-
-    addPoint(notifier.value);
-
-    final paint = Paint()
-      ..color = myColor
-      ..strokeWidth = 10
-      ..strokeCap = StrokeCap.round;
-
-    // canvas.drawPoints(pointMode, points.map((e) => e.offset).toList(), paint);
-
-    for (var i = 0; i < points.length - 1; i++) {
-      final p1 = points[i].offset;
-      final p2 = points[i + 1].offset;
-      // double xDiff = p2.dx - p1.dx;
-      // double yDiff = p2.dy - p1.dy;
-      // if (xDiff.abs() < threshold || yDiff.abs() < threshold) {
-      //   continue;
-      // }
-      canvas.drawLine(p1, p2, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
-  }
-
-  void addPoint(Offset offset) {
-    points.add(DrawingPoint(offset: offset));
   }
 }
