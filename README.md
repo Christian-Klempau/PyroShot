@@ -1,6 +1,9 @@
 # PyroShot
 
-<img width="600px" src="./PyroShot.png" alt="demo.png" />
+<!-- center -->
+<p align="center">
+  <img width="600px" src="./PyroShot.png" alt="demo.png" />
+</p>
 
 A multiplatform Screen Capture and annotation Tool, written in Flutter.
 
