@@ -1,5 +1,7 @@
 # PyroShot
 
+![img](PyroShot.png)
+
 A multiplatform Screen Capture and annotation Tool, written in Flutter.
 
 Inspired by Flameshot, built Linux first.
