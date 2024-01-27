@@ -1,6 +1,6 @@
 # PyroShot
 
-[<img src="PyroShot.png">]()
+<img width="600px" src="./PyroShot.png" alt="demo.png" />
 
 A multiplatform Screen Capture and annotation Tool, written in Flutter.
 
